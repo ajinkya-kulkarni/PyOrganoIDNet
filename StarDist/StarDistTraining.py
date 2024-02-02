@@ -43,7 +43,7 @@ for file_pattern in file_patterns:
 base_directory = '/home/ajinkya/Desktop/PyOrganoidAnalysis/DataSetPreparation'
 
 train_directory = 'Training_Set'
-test_directory = 'Test_Set'
+test_directory = 'Validation_Set'
 
 # Create Train and Test directories if they don't exist
 if os.path.exists(train_directory):
@@ -63,7 +63,7 @@ if include_augmented == 'yes':
 	training_sources.append('Augmented_Set')
 
 # Add 'Validation_Set' to test_sources
-test_sources = ['Test_Set']
+test_sources = ['Validation_Set']
 
 # Helper function to copy files from source to destination
 def copy_files(src_root, filenames, destination):
@@ -81,7 +81,7 @@ for src in tqdm(training_sources, desc="Copying Training Data"):
 			copy_files(root, files, train_directory)
 			
 # Copy test data (and validation data)
-for src in tqdm(test_sources, desc="Copying Test Data"):
+for src in tqdm(test_sources, desc="Copying Validation Data"):
 	for root, _, files in tqdm(list(os.walk(os.path.join(base_directory, src))), leave = False):
 		if 'images' in root:
 			copy_files(root, files, test_directory)
