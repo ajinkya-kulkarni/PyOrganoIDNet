@@ -24,13 +24,13 @@ for file_pattern in file_patterns:
 print()
 
 train_directory = 'Training_Set'
-test_directory = 'Test_Set'
+test_directory = 'Validation_Set'
 
 ##################################################################################################################################################
 
 dataset_directory = '/home/ajinkya/Desktop/PyOrganoidAnalysis/DataSetPreparation'
 train_directory = 'Training_Set'
-test_directory = 'Test_Set'
+test_directory = 'Validation_Set'
 
 # Create Train and Test directories if they don't exist
 if os.path.exists(train_directory):
@@ -50,7 +50,7 @@ if include_augmented == 'yes':
 	training_sources.append('Augmented_Set')
 
 # Add 'Validation_Set' to test_sources
-test_sources = ['Test_Set']
+test_sources = ['Validation_Set']
 
 # Helper function to copy files from source to destination
 def copy_files(src_root, filenames, destination):
@@ -85,7 +85,7 @@ save_every_value = 50
 min_labels_per_mask = 2
 initial_diameter = 0
 pretrained_model = 'None'
-batch_size = 4
+batch_size = 2
 flow_threshold = 0.4
 base_dir = "/home/ajinkya/Desktop/PyOrganoidAnalysis/Cellpose"
 GPU_USAGE = True
