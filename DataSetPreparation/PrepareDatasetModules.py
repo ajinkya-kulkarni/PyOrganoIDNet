@@ -714,21 +714,31 @@ def validate_and_count_images():
 
 ##################################################################################################
 
-def count_organoid_number_and_report(folder_path):
-	total_blobs = 0
-	file_count = 0
+def count_organoid_number_by_type(folder_path):
+	total_human_blobs = 0
+	total_mouse_blobs = 0
+	human_file_count = 0
+	mouse_file_count = 0
 
-	for filename in tqdm(sorted(os.listdir(folder_path)), desc = 'Calculating statistics on masks', leave = True):
+	for filename in tqdm(sorted(os.listdir(folder_path)), desc='Calculating statistics on masks', leave=True):
 		if filename.endswith(".tiff") or filename.endswith(".tif"):
 			file_path = os.path.join(folder_path, filename)
 			with Image.open(file_path) as img:
 				img_array = np.array(img)
 				unique_values = np.unique(img_array)
 
-				# Subtract 1 for background (assuming 0 is background)
-				total_blobs += len(unique_values) - 1 if 0 in unique_values else len(unique_values)
-				file_count += 1
+				# Count blobs (subtract 1 for background if 0 is present)
+				blob_count = len(unique_values) - 1 if 0 in unique_values else len(unique_values)
 
-	print(f"Total number of Organoids in '{folder_path}' for {file_count} masks is: {total_blobs}")
+				# Check if the file is human or mouse and update counts
+				if filename.startswith("human_"):
+					total_human_blobs += blob_count
+					human_file_count += 1
+				elif filename.startswith("mouse_"):
+					total_mouse_blobs += blob_count
+					mouse_file_count += 1
+
+	print(f"Total number of Human Organoids in '{folder_path}' for {human_file_count} masks is: {total_human_blobs}")
+	print(f"Total number of Mouse Organoids in '{folder_path}' for {mouse_file_count} masks is: {total_mouse_blobs}")
 
 ##################################################################################################

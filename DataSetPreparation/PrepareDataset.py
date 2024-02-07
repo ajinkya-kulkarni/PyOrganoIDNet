@@ -223,9 +223,9 @@ validate_and_count_images()
 
 print()
 
-count_organoid_number_and_report(os.path.join('Annotations', 'masks'))
-
-count_organoid_number_and_report(os.path.join('Test_Set', 'GroundTruthMasks'))
+count_organoid_number_by_type(os.path.join('Annotations', 'masks'))
+print()
+count_organoid_number_by_type(os.path.join('Test_Set', 'GroundTruthMasks'))
 
 print()
 
