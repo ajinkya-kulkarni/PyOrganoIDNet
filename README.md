@@ -7,6 +7,7 @@
 
 ## Introduction
 Welcome to the OrganoIDNetData repository. This public dataset is a significant step forward in cancer research, particularly in the study of Pancreatic Ductal Adenocarcinoma (PDAC). It comprises phase-contrast images of murine and patient-derived tumor organoids co-cultured with immune cells. With 190 images and 33,906 organoids, OrganoIDNetData serves as a potential benchmark for organoid segmentation models in oncological research.
+The pre-print based on this work can be found [here](https://www.biorxiv.org/content/10.1101/2024.02.12.580032v1.full.pdf).
 
 ## Dataset Overview
 - **Type of Cancer:** Pancreatic Ductal Adenocarcinoma
