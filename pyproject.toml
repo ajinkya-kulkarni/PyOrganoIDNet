@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12, <3.14"
 dependencies = [
+    "albumentations>=2.0.8",
+    "cellseg-models-pytorch>=0.1.30",
     "matplotlib",
     "numpy",
     "opencv-python-headless",
@@ -13,4 +15,10 @@ dependencies = [
     "scipy",
     "streamlit",
     "tqdm",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.2.0",
+    "ruff>=0.15.21",
 ]
