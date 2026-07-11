@@ -1,0 +1,16 @@
+[project]
+name = "pyorganoidnet"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12, <3.14"
+dependencies = [
+    "matplotlib",
+    "numpy",
+    "opencv-python-headless",
+    "pandas",
+    "pillow",
+    "scikit-image",
+    "scipy",
+    "streamlit",
+    "tqdm",
+]
