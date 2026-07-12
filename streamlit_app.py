@@ -1,7 +1,6 @@
 import io
 
 import albumentations as A
-import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -39,9 +38,9 @@ def predict(model, img_rgb):
     out = model(tensor)
     type_prob = torch.softmax(out["nuc"].type_map, dim=1)
     fg_prob = type_prob[0, 1].cpu().numpy()
-    flow = out["nuc"].aux_map[0].cpu().numpy()
+    flow = out["nuc"].flow[0].cpu().numpy().transpose(1, 2, 0)
     instances = post_proc_cellpose(fg_prob > 0.5, flow, min_size=30)
-    return instances, fg_prob
+    return instances
 
 
 def classify_organoids(instances, gray_img, threshold=50):
@@ -151,12 +150,6 @@ COLORS = {"Live": "#27ae60", "Dead": "#e74c3c"}
 
 
 def plot_morphology(df):
-    classes = [c for c in ("Live", "Dead") if c in df["Status"].values]
-    n_rows = len(classes)
-
-    fig = plt.figure(figsize=(12, n_rows * 2.5))
-    gs = gridspec.GridSpec(n_rows, 4, figure=fig, hspace=0.4, wspace=0.35)
-
     cols = ["area", "eccentricity", "jaggedness", "compactness"]
     titles = {
         "area": "Area",
@@ -171,33 +164,34 @@ def plot_morphology(df):
         "compactness": "Compactness (px)",
     }
 
-    for row_idx, status in enumerate(classes):
+    figs = {}
+    for status in ("Live", "Dead"):
         sub = df[df["Status"] == status]
         n = len(sub)
-        for col_idx, col in enumerate(cols):
-            ax = fig.add_subplot(gs[row_idx, col_idx])
-            if n:
-                bins = min(30, max(8, n // 5))
-                sns.histplot(sub[col], bins=bins, stat="density",
-                             alpha=0.3, color=COLORS[status],
-                             edgecolor=COLORS[status], linewidth=0.4, ax=ax)
-                if n >= 2:
-                    sns.kdeplot(sub[col], color=COLORS[status], linewidth=1.8,
-                                bw_adjust=0.5, ax=ax)
+        if n == 0:
+            continue
+        fig, axes = plt.subplots(1, 4, figsize=(12, 2.8))
+        for ax, col in zip(axes, cols):
+            bins = min(30, max(8, n // 5))
+            sns.histplot(sub[col], bins=bins, stat="density",
+                         alpha=0.3, color=COLORS[status],
+                         edgecolor=COLORS[status], linewidth=0.4, ax=ax)
+            if n >= 2:
+                sns.kdeplot(sub[col], color=COLORS[status], linewidth=1.8,
+                            bw_adjust=0.5, ax=ax)
                 mean_val = sub[col].mean()
                 ax.axvline(mean_val, color=COLORS[status], linestyle="--",
                            linewidth=1.0, alpha=0.6, label=f"{status} mean")
-            ax.set_title(f"{status} \u2013 {titles[col]}", fontsize=12, pad=6)
+                leg = ax.legend(fontsize=8, framealpha=0.9, edgecolor="#b0b0b0")
+                leg.get_frame().set_linewidth(0.5)
+            ax.set_title(titles[col], fontsize=12, pad=6)
             ax.set_xlabel(xlabels[col], fontsize=10)
             ax.set_ylabel("Density", fontsize=10)
             ax.tick_params(labelsize=8)
-            if n >= 2:
-                leg = ax.legend(fontsize=8, framealpha=0.9, edgecolor="#b0b0b0")
-                leg.get_frame().set_linewidth(0.5)
             sns.despine(ax=ax, top=True, right=True)
-
-    fig.suptitle("Organoid Morphology Analysis", fontsize=15, y=1.02)
-    return fig
+        fig.suptitle(f"{status} organoids", fontsize=14, y=1.02)
+        figs[status] = fig
+    return figs
 
 
 st.set_page_config(page_title="OrganoIDNet", layout="wide")
@@ -213,13 +207,13 @@ if uploaded is not None:
         st.warning(f"Expected 256\u00d7256, got {img.shape[1]}\u00d7{img.shape[0]}. Resizing.")
         img = np.array(Image.fromarray(img).resize((256, 256), Image.Resampling.LANCZOS))
 
-    instances, fg_prob = predict(model, img)
+    instances = predict(model, img)
     gray = np.mean(img, axis=2)
     live_ids, dead_ids = classify_organoids(instances, gray, INTENSITY_THRESHOLD)
     stats_df = compute_stats(instances, img)
     total = len(stats_df)
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     with col1:
         st.image(img, caption="Input", width="stretch")
     with col2:
@@ -227,8 +221,6 @@ if uploaded is not None:
     with col3:
         st.image(draw_classified_outlines(img, instances, live_ids, dead_ids),
                  caption="Overlay", width="stretch")
-    with col4:
-        st.image(fg_prob, caption="Foreground prob.", clamp=True, width="stretch")
 
     n_live = len(live_ids)
     n_dead = len(dead_ids)
@@ -260,7 +252,9 @@ if uploaded is not None:
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
         st.subheader("Morphology distributions")
-        st.pyplot(plot_morphology(stats_df))
+        figs = plot_morphology(stats_df)
+        for fig in figs.values():
+            st.pyplot(fig)
 
         st.subheader("Per-organoid details")
         display = stats_df[["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]]
