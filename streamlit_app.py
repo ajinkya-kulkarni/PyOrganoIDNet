@@ -65,11 +65,11 @@ if uploaded is not None:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.image(img, caption="Input", use_container_width=True)
+        st.image(img, caption="Input", width="stretch")
     with col2:
-        st.image(color_instances(instances), caption="Predicted instances", use_container_width=True)
+        st.image(color_instances(instances), caption="Predicted instances", width="stretch")
     with col3:
-        st.image(fg_prob, caption="Foreground probability", clamp=True, use_container_width=True)
+        st.image(fg_prob, caption="Foreground probability", clamp=True, width="stretch")
 
     n_inst = len(np.unique(instances)) - 1
     st.metric("Organoids detected", n_inst)
