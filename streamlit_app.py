@@ -350,7 +350,7 @@ else:
                     "Dead": int((sub["Status"] == "Dead").sum()),
                 })
         st.dataframe(pd.DataFrame(sz_rows), width="stretch", hide_index=True)
-        st.caption("*Size categories computed per image (paper methodology)")
+        st.caption("*Size categories computed per image (OrganoIDNet: https://doi.org/10.1038/s41597-022-01878-w)")
 
         st.subheader("Morphology distributions (aggregate)")
         figs = plot_morphology(combined)
