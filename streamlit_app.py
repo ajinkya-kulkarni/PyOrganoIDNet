@@ -242,21 +242,8 @@ def plot_morphology(df):
 st.set_page_config(page_title="OrganoIDNet", layout="wide")
 st.title("OrganoIDNet")
 
-model_choice = st.sidebar.radio(
-    "Segmentation model",
-    ["CellSeg-PyTorch (current)", "Cellpose (original)"],
-)
-
-if model_choice == "Cellpose (original)":
-    seg_model = load_cellpose_model()
-
-    def predict_fn(p):
-        return predict_cellpose(seg_model, p)
-else:
-    seg_model = load_model()
-
-    def predict_fn(p):
-        return predict(seg_model, p)
+cellseg_model = load_model()
+cellpose_model = load_cellpose_model()
 
 
 def load_image(f):
@@ -271,6 +258,21 @@ uploaded_files = st.file_uploader(
 
 if not uploaded_files:
     st.stop()
+
+model_choice = st.selectbox(
+    "Segmentation model",
+    ["Cellpose (original)", "CellSeg-PyTorch"],
+)
+
+if model_choice == "Cellpose (original)":
+
+    def predict_fn(p):
+        return predict_cellpose(cellpose_model, p)
+else:
+
+    def predict_fn(p):
+        return predict(cellseg_model, p)
+
 
 n_files = len(uploaded_files)
 if n_files > 20:
