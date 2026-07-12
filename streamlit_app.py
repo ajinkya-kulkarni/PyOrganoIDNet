@@ -199,14 +199,32 @@ st.title("OrganoIDNet")
 
 model = load_model()
 
-uploaded = st.file_uploader("Upload a 256\u00d7256 organoid image", type=["png", "jpg", "jpeg"])
 
-if uploaded is not None:
-    img = np.array(Image.open(io.BytesIO(uploaded.read())).convert("RGB"))
+def load_image(f):
+    img = np.array(Image.open(io.BytesIO(f.read())).convert("RGB"))
     if img.shape[:2] != (256, 256):
-        st.warning(f"Expected 256\u00d7256, got {img.shape[1]}\u00d7{img.shape[0]}. Resizing.")
         img = np.array(Image.fromarray(img).resize((256, 256), Image.Resampling.LANCZOS))
+    return img
 
+
+uploaded_files = st.file_uploader(
+    "Upload 256\u00d7256 organoid images (up to 20)",
+    type=["png", "jpg", "jpeg"],
+    accept_multiple_files=True,
+)
+
+if not uploaded_files:
+    st.stop()
+
+n_files = len(uploaded_files)
+if n_files > 20:
+    st.error("Maximum 20 images allowed.")
+    st.stop()
+
+# ── Single image: full detail view ──────────────────────────────────────
+if n_files == 1:
+    f = uploaded_files[0]
+    img = load_image(f)
     instances = predict(model, img)
     gray = np.mean(img, axis=2)
     live_ids, dead_ids = classify_organoids(instances, gray, INTENSITY_THRESHOLD)
@@ -260,3 +278,80 @@ if uploaded is not None:
         display = stats_df[["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]]
         display.columns = ["ID", "Area (px\u00b2)", "Eccentricity", "Mean intensity", "Size", "Status"]
         st.dataframe(display, width="stretch", hide_index=True)
+
+# ── Multiple images: aggregate view ─────────────────────────────────────
+else:
+    # Cache results per batch of file names
+    file_key = tuple(f.name for f in uploaded_files)
+    if "batch_key" not in st.session_state or st.session_state["batch_key"] != file_key:
+        st.session_state["batch_key"] = file_key
+        st.session_state["batch_results"] = []
+        progress = st.progress(0, text="Segmenting organoids...")
+        for i, f in enumerate(uploaded_files):
+            img = load_image(f)
+            instances = predict(model, img)
+            stats_df = compute_stats(instances, img)
+            st.session_state["batch_results"].append((f.name, stats_df))
+            progress.progress((i + 1) / n_files, text=f"Segmented {i + 1}/{n_files}")
+        progress.empty()
+
+    results = st.session_state["batch_results"]
+    all_dfs = [df for _, df in results if len(df) > 0]
+
+    if not all_dfs:
+        st.warning("No organoids detected in any of the uploaded images.")
+    else:
+        combined = pd.concat(all_dfs, ignore_index=True)
+
+        total_organoids = len(combined)
+        n_live = int((combined["Status"] == "Live").sum())
+        n_dead = int((combined["Status"] == "Dead").sum())
+        viability = n_live / total_organoids * 100
+        mean_area = combined["area"].mean()
+        mean_ecc = combined["eccentricity"].mean()
+
+        m1, m2, m3, m4, m5, m6 = st.columns(6)
+        m1.metric("Total organoids", total_organoids)
+        m2.metric("Live", n_live)
+        m3.metric("Dead", n_dead)
+        m4.metric("Viability", f"{viability:.1f}%")
+        m5.metric("Mean area", f"{mean_area:.0f} px\u00b2")
+        m6.metric("Mean eccentricity", f"{mean_ecc:.2f}")
+
+        st.subheader("Per-image summary")
+        summary_rows = []
+        for name, df in results:
+            t = len(df)
+            lv = int((df["Status"] == "Live").sum()) if t > 0 else 0
+            dd = int((df["Status"] == "Dead").sum()) if t > 0 else 0
+            v = lv / t * 100 if t > 0 else 0
+            summary_rows.append({
+                "Image": name,
+                "Organoids": t,
+                "Live": lv,
+                "Dead": dd,
+                "Viability": f"{v:.1f}%",
+            })
+        st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
+
+        st.subheader("Size distribution (aggregate)")
+        order = ["Tiny", "Small", "Medium", "Large", "Huge"]
+        sz_rows = []
+        for sz in order:
+            sub = combined[combined["Size"] == sz]
+            if len(sub):
+                sz_rows.append({
+                    "Size": sz,
+                    "Total": len(sub),
+                    "Live": int((sub["Status"] == "Live").sum()),
+                    "Dead": int((sub["Status"] == "Dead").sum()),
+                })
+        st.dataframe(pd.DataFrame(sz_rows), width="stretch", hide_index=True)
+
+        st.subheader("Morphology distributions (aggregate)")
+        figs = plot_morphology(combined)
+        for fig in figs.values():
+            st.pyplot(fig)
+
+        csv = combined.to_csv(index=False).encode()
+        st.download_button("Download all data as CSV", csv, "organoid_data.csv", "text/csv")
