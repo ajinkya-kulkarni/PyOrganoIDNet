@@ -114,47 +114,75 @@ def compute_stats(instances, img):
     return df
 
 
-sns.set_style("whitegrid")
-COLORS = {"Live": "#2ecc71", "Dead": "#e74c3c"}
+sns.set_theme(style="ticks", font_scale=1.1, rc={
+    "axes.facecolor": "#F5F5F5",
+    "axes.grid": True,
+    "grid.color": "white",
+    "grid.linestyle": "-",
+    "grid.alpha": 0.8,
+})
+COLORS = {"Live": "#27ae60", "Dead": "#e74c3c"}
 
 
 def plot_morphology(df):
     fig = plt.figure(figsize=(14, 8))
-    gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3)
+    gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.35, wspace=0.3)
     ax_area = fig.add_subplot(gs[0, 0])
     ax_ecc = fig.add_subplot(gs[0, 1])
     ax_scatter = fig.add_subplot(gs[:, 2])
     ax_jagg = fig.add_subplot(gs[1, 0])
     ax_comp = fig.add_subplot(gs[1, 1])
 
-    feature_config = [
-        (ax_area, "area", "Area (px\u00b2)"),
-        (ax_ecc, "eccentricity", "Eccentricity"),
-        (ax_jagg, "jaggedness", "Jaggedness (perimeter / area)"),
-        (ax_comp, "compactness", "Compactness (area / perimeter)"),
-    ]
+    titles = {
+        "area": "Area",
+        "eccentricity": "Eccentricity",
+        "jaggedness": "Jaggedness",
+        "compactness": "Compactness",
+    }
+    xlabels = {
+        "area": "Area (px\u00b2)",
+        "eccentricity": "Eccentricity (a.u.)",
+        "jaggedness": "Perimeter / Area",
+        "compactness": "Area / Perimeter",
+    }
 
-    for ax, col, xlabel in feature_config:
+    for ax, col in zip([ax_area, ax_ecc, ax_jagg, ax_comp], titles):
         for status in ("Live", "Dead"):
             sub = df[df["Status"] == status]
             if len(sub):
-                sns.histplot(sub[col], bins=10, alpha=0.5, color=COLORS[status],
-                             label=status, ax=ax)
-        ax.set_xlabel(xlabel)
-        ax.set_ylabel("Count")
+                sns.histplot(sub[col], bins=12, stat="density", common_norm=False,
+                             alpha=0.3, color=COLORS[status], label=status,
+                             edgecolor=COLORS[status], linewidth=0.5, ax=ax)
+                sns.kdeplot(sub[col], color=COLORS[status], linewidth=2, ax=ax)
+                mean_val = sub[col].mean()
+                ax.axvline(mean_val, color=COLORS[status], linestyle="--",
+                           linewidth=1.5, alpha=0.7)
+        ax.set_title(titles[col], fontsize=13, fontweight="bold", pad=8)
+        ax.set_xlabel(xlabels[col], fontsize=11)
+        ax.set_ylabel("Density", fontsize=11)
+        ax.tick_params(labelsize=9)
         if df["Status"].nunique() > 1:
-            ax.legend(fontsize=8)
+            leg = ax.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
+            leg.get_frame().set_linewidth(0.5)
+        sns.despine(ax=ax, top=True, right=True)
 
     for status in ("Live", "Dead"):
         sub = df[df["Status"] == status]
         if len(sub):
-            sns.scatterplot(data=sub, x="area", y="eccentricity", color=COLORS[status],
-                            label=status, ax=ax_scatter, s=50, edgecolor="white", linewidth=0.3)
-    ax_scatter.set_xlabel("Area (px\u00b2)")
-    ax_scatter.set_ylabel("Eccentricity")
+            sns.scatterplot(data=sub, x="area", y="eccentricity",
+                            color=COLORS[status], label=status,
+                            ax=ax_scatter, s=70, edgecolor="white", linewidth=0.5,
+                            alpha=0.85)
+    ax_scatter.set_title("Area vs Eccentricity", fontsize=13, fontweight="bold", pad=8)
+    ax_scatter.set_xlabel("Area (px\u00b2)", fontsize=11)
+    ax_scatter.set_ylabel("Eccentricity", fontsize=11)
+    ax_scatter.tick_params(labelsize=9)
     if df["Status"].nunique() > 1:
-        ax_scatter.legend(fontsize=8)
+        leg = ax_scatter.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
+        leg.get_frame().set_linewidth(0.5)
+    sns.despine(ax=ax_scatter, top=True, right=True)
 
+    fig.suptitle("Organoid Morphology Analysis", fontsize=15, fontweight="bold", y=1.02)
     return fig
 
 
