@@ -168,7 +168,7 @@ def plot_morphology(df):
                 mean_val = sub[col].mean()
                 ax.axvline(mean_val, color=COLORS[status], linestyle="--",
                            linewidth=1.5, alpha=0.7)
-        ax.set_title(titles[col], fontsize=13, fontweight="bold", pad=8)
+        ax.set_title(titles[col], fontsize=13, pad=8)
         ax.set_xlabel(xlabels[col], fontsize=11)
         ax.set_ylabel("Density", fontsize=11)
         ax.tick_params(labelsize=9)
@@ -184,7 +184,7 @@ def plot_morphology(df):
                             color=COLORS[status], label=status,
                             ax=ax_scatter, s=70, edgecolor="white", linewidth=0.5,
                             alpha=0.85)
-    ax_scatter.set_title("Area vs Eccentricity", fontsize=13, fontweight="bold", pad=8)
+    ax_scatter.set_title("Area vs Eccentricity", fontsize=13, pad=8)
     ax_scatter.set_xlabel("Area (px\u00b2)", fontsize=11)
     ax_scatter.set_ylabel("Eccentricity", fontsize=11)
     ax_scatter.tick_params(labelsize=9)
@@ -193,7 +193,7 @@ def plot_morphology(df):
         leg.get_frame().set_linewidth(0.5)
     sns.despine(ax=ax_scatter, top=True, right=True)
 
-    fig.suptitle("Organoid Morphology Analysis", fontsize=15, fontweight="bold", y=1.02)
+    fig.suptitle("Organoid Morphology Analysis", fontsize=15, y=1.02)
     return fig
 
 
