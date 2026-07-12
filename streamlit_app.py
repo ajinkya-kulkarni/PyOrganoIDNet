@@ -13,6 +13,7 @@ from cellseg_models_pytorch.postproc.functional.cellpose.cellpose import (
     post_proc_cellpose,
 )
 from cellseg_models_pytorch.transforms.albu_transforms import MinMaxNormalization
+from patch_inference import predict_large_image
 from skimage.measure import regionprops_table
 
 
@@ -24,7 +25,9 @@ INTENSITY_THRESHOLD = 50
 
 @st.cache_resource
 def load_model():
-    model = cellpose_nuclei(n_nuc_classes=2, enc_name="efficientnet_b0", enc_pretrain=False)
+    model = cellpose_nuclei(
+        n_nuc_classes=2, enc_name="efficientnet_b0", enc_pretrain=False
+    )
     model.load_state_dict(torch.load(CKPT, map_location="cpu")["model"])
     model.to(DEVICE)
     model.eval()
@@ -77,20 +80,20 @@ def draw_classified_outlines(img, instances, live_ids, dead_ids):
             continue
         y1, y2 = int(ys.min()), int(ys.max())
         x1, x2 = int(xs.min()), int(xs.max())
-        overlay[y1:y2 + 1, x1] = [0, 255, 0]
-        overlay[y1:y2 + 1, x2] = [0, 255, 0]
-        overlay[y1, x1:x2 + 1] = [0, 255, 0]
-        overlay[y2, x1:x2 + 1] = [0, 255, 0]
+        overlay[y1 : y2 + 1, x1] = [0, 255, 0]
+        overlay[y1 : y2 + 1, x2] = [0, 255, 0]
+        overlay[y1, x1 : x2 + 1] = [0, 255, 0]
+        overlay[y2, x1 : x2 + 1] = [0, 255, 0]
     for inst_id in dead_ids:
         ys, xs = np.where(instances == inst_id)
         if len(ys) == 0:
             continue
         y1, y2 = int(ys.min()), int(ys.max())
         x1, x2 = int(xs.min()), int(xs.max())
-        overlay[y1:y2 + 1, x1] = [255, 0, 0]
-        overlay[y1:y2 + 1, x2] = [255, 0, 0]
-        overlay[y1, x1:x2 + 1] = [255, 0, 0]
-        overlay[y2, x1:x2 + 1] = [255, 0, 0]
+        overlay[y1 : y2 + 1, x1] = [255, 0, 0]
+        overlay[y1 : y2 + 1, x2] = [255, 0, 0]
+        overlay[y1, x1 : x2 + 1] = [255, 0, 0]
+        overlay[y2, x1 : x2 + 1] = [255, 0, 0]
     return overlay
 
 
@@ -112,6 +115,7 @@ def compute_stats(instances, img):
         p20, p40, p60, p80 = np.percentile(areas, [20, 40, 60, 80])
     else:
         p20 = p40 = p60 = p80 = areas[0]
+
     def size_cat(a):
         if a <= p20:
             return "Tiny"
@@ -122,30 +126,42 @@ def compute_stats(instances, img):
         if a <= p80:
             return "Large"
         return "Huge"
+
     df["Size"] = df["area"].apply(size_cat)
     return df
 
 
-plt.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Helvetica Neue", "Arial", "Liberation Sans", "DejaVu Sans", "sans-serif"],
-    "font.size": 11,
-    "axes.titlesize": 13,
-    "axes.labelsize": 11,
-    "xtick.labelsize": 9,
-    "ytick.labelsize": 9,
-    "legend.fontsize": 9,
-    "figure.dpi": 100,
-    "axes.facecolor": "white",
-    "axes.edgecolor": "black",
-})
-sns.set_theme(style="ticks", rc={
-    "axes.facecolor": "white",
-    "axes.grid": True,
-    "grid.color": "#e0e0e0",
-    "grid.linestyle": "-",
-    "grid.alpha": 0.5,
-})
+plt.rcParams.update(
+    {
+        "font.family": "sans-serif",
+        "font.sans-serif": [
+            "Helvetica Neue",
+            "Arial",
+            "Liberation Sans",
+            "DejaVu Sans",
+            "sans-serif",
+        ],
+        "font.size": 11,
+        "axes.titlesize": 13,
+        "axes.labelsize": 11,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+        "legend.fontsize": 9,
+        "figure.dpi": 100,
+        "axes.facecolor": "white",
+        "axes.edgecolor": "black",
+    }
+)
+sns.set_theme(
+    style="ticks",
+    rc={
+        "axes.facecolor": "white",
+        "axes.grid": True,
+        "grid.color": "#e0e0e0",
+        "grid.linestyle": "-",
+        "grid.alpha": 0.5,
+    },
+)
 COLORS = {"Live": "#27ae60", "Dead": "#e74c3c"}
 
 
@@ -173,15 +189,29 @@ def plot_morphology(df):
         fig, axes = plt.subplots(1, 4, figsize=(12, 2.8))
         for ax, col in zip(axes, cols):
             bins = min(30, max(8, n // 5))
-            sns.histplot(sub[col], bins=bins, stat="density",
-                         alpha=0.3, color=COLORS[status],
-                         edgecolor=COLORS[status], linewidth=0.4, ax=ax)
+            sns.histplot(
+                sub[col],
+                bins=bins,
+                stat="density",
+                alpha=0.3,
+                color=COLORS[status],
+                edgecolor=COLORS[status],
+                linewidth=0.4,
+                ax=ax,
+            )
             if n >= 2:
-                sns.kdeplot(sub[col], color=COLORS[status], linewidth=1.8,
-                            bw_adjust=0.5, ax=ax)
+                sns.kdeplot(
+                    sub[col], color=COLORS[status], linewidth=1.8, bw_adjust=0.5, ax=ax
+                )
                 mean_val = sub[col].mean()
-                ax.axvline(mean_val, color=COLORS[status], linestyle="--",
-                           linewidth=1.0, alpha=0.6, label=f"{status} mean")
+                ax.axvline(
+                    mean_val,
+                    color=COLORS[status],
+                    linestyle="--",
+                    linewidth=1.0,
+                    alpha=0.6,
+                    label=f"{status} mean",
+                )
                 leg = ax.legend(fontsize=8, framealpha=0.9, edgecolor="#b0b0b0")
                 leg.get_frame().set_linewidth(0.5)
             ax.set_title(titles[col], fontsize=12, pad=6)
@@ -201,14 +231,11 @@ model = load_model()
 
 
 def load_image(f):
-    img = np.array(Image.open(io.BytesIO(f.read())).convert("RGB"))
-    if img.shape[:2] != (256, 256):
-        img = np.array(Image.fromarray(img).resize((256, 256), Image.Resampling.LANCZOS))
-    return img
+    return np.array(Image.open(io.BytesIO(f.read())).convert("RGB"))
 
 
 uploaded_files = st.file_uploader(
-    "Upload 256\u00d7256 organoid images (up to 20)",
+    "Upload organoid images (256\u00d7256 patches or larger, up to 2000px per side; up to 20)",
     type=["png", "jpg", "jpeg"],
     accept_multiple_files=True,
 )
@@ -225,7 +252,7 @@ if n_files > 20:
 if n_files == 1:
     f = uploaded_files[0]
     img = load_image(f)
-    instances = predict(model, img)
+    instances = predict_large_image(lambda p: predict(model, p), img)
     gray = np.mean(img, axis=2)
     live_ids, dead_ids = classify_organoids(instances, gray, INTENSITY_THRESHOLD)
     stats_df = compute_stats(instances, img)
@@ -235,10 +262,15 @@ if n_files == 1:
     with col1:
         st.image(img, caption="Input", width="stretch")
     with col2:
-        st.image(render_instance_mask(instances), caption="Instance mask", width="stretch")
+        st.image(
+            render_instance_mask(instances), caption="Instance mask", width="stretch"
+        )
     with col3:
-        st.image(draw_classified_outlines(img, instances, live_ids, dead_ids),
-                 caption="Overlay", width="stretch")
+        st.image(
+            draw_classified_outlines(img, instances, live_ids, dead_ids),
+            caption="Overlay",
+            width="stretch",
+        )
 
     n_live = len(live_ids)
     n_dead = len(dead_ids)
@@ -261,14 +293,18 @@ if n_files == 1:
         for sz in order:
             sub = stats_df[stats_df["Size"] == sz]
             if len(sub):
-                rows.append({
-                    "Size": sz,
-                    "Total": len(sub),
-                    "Live": int((sub["Status"] == "Live").sum()),
-                    "Dead": int((sub["Status"] == "Dead").sum()),
-                })
+                rows.append(
+                    {
+                        "Size": sz,
+                        "Total": len(sub),
+                        "Live": int((sub["Status"] == "Live").sum()),
+                        "Dead": int((sub["Status"] == "Dead").sum()),
+                    }
+                )
         st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
-        st.caption("*Size categories computed per image (OrganoIDNet: https://doi.org/10.1007/s13402-024-00958-2 | Dataset: https://www.nature.com/articles/s41597-024-03631-3)")
+        st.caption(
+            "*Size categories computed per image (OrganoIDNet: https://doi.org/10.1007/s13402-024-00958-2 | Dataset: https://www.nature.com/articles/s41597-024-03631-3)"
+        )
 
         st.subheader("Morphology distributions")
         figs = plot_morphology(stats_df)
@@ -276,8 +312,17 @@ if n_files == 1:
             st.pyplot(fig)
 
         st.subheader("Per-organoid details")
-        display = stats_df[["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]]
-        display.columns = ["ID", "Area (px\u00b2)", "Eccentricity", "Mean intensity", "Size", "Status"]
+        display = stats_df[
+            ["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]
+        ]
+        display.columns = [
+            "ID",
+            "Area (px\u00b2)",
+            "Eccentricity",
+            "Mean intensity",
+            "Size",
+            "Status",
+        ]
         st.dataframe(display, width="stretch", hide_index=True)
 
 # ── Multiple images: aggregate view ─────────────────────────────────────
@@ -290,7 +335,7 @@ else:
         progress = st.progress(0, text="Segmenting organoids...")
         for i, f in enumerate(uploaded_files):
             img = load_image(f)
-            instances = predict(model, img)
+            instances = predict_large_image(lambda p: predict(model, p), img)
             stats_df = compute_stats(instances, img)
             st.session_state["batch_results"].append((f.name, stats_df))
             progress.progress((i + 1) / n_files, text=f"Segmented {i + 1}/{n_files}")
@@ -329,13 +374,15 @@ else:
                 v = f"{lv / t * 100:.1f}%"
             else:
                 v = "\u2014"
-            summary_rows.append({
-                "Image": name,
-                "Organoids": t,
-                "Live": lv,
-                "Dead": dd,
-                "Viability": v,
-            })
+            summary_rows.append(
+                {
+                    "Image": name,
+                    "Organoids": t,
+                    "Live": lv,
+                    "Dead": dd,
+                    "Viability": v,
+                }
+            )
         st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
 
         st.subheader("Size distribution (aggregate)")
@@ -344,14 +391,18 @@ else:
         for sz in order:
             sub = combined[combined["Size"] == sz]
             if len(sub):
-                sz_rows.append({
-                    "Size": sz,
-                    "Total": len(sub),
-                    "Live": int((sub["Status"] == "Live").sum()),
-                    "Dead": int((sub["Status"] == "Dead").sum()),
-                })
+                sz_rows.append(
+                    {
+                        "Size": sz,
+                        "Total": len(sub),
+                        "Live": int((sub["Status"] == "Live").sum()),
+                        "Dead": int((sub["Status"] == "Dead").sum()),
+                    }
+                )
         st.dataframe(pd.DataFrame(sz_rows), width="stretch", hide_index=True)
-        st.caption("*Size categories computed per image (OrganoIDNet: https://doi.org/10.1007/s13402-024-00958-2 | Dataset: https://www.nature.com/articles/s41597-024-03631-3)")
+        st.caption(
+            "*Size categories computed per image (OrganoIDNet: https://doi.org/10.1007/s13402-024-00958-2 | Dataset: https://www.nature.com/articles/s41597-024-03631-3)"
+        )
 
         st.subheader("Morphology distributions (aggregate)")
         figs = plot_morphology(combined)
@@ -359,4 +410,6 @@ else:
             st.pyplot(fig)
 
         csv = combined.to_csv(index=False).encode()
-        st.download_button("Download all data as CSV", csv, "organoid_data.csv", "text/csv")
+        st.download_button(
+            "Download all data as CSV", csv, "organoid_data.csv", "text/csv"
+        )
