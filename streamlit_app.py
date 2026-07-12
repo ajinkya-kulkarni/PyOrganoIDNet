@@ -199,7 +199,7 @@ if uploaded is not None:
     img = np.array(Image.open(io.BytesIO(uploaded.read())).convert("RGB"))
     if img.shape[:2] != (256, 256):
         st.warning(f"Expected 256\u00d7256, got {img.shape[1]}\u00d7{img.shape[0]}. Resizing.")
-        img = np.array(Image.fromarray(img).resize((256, 256), Image.LANCZOS))
+        img = np.array(Image.fromarray(img).resize((256, 256), Image.Resampling.LANCZOS))
 
     instances, fg_prob = predict(model, img)
     gray = np.mean(img, axis=2)
