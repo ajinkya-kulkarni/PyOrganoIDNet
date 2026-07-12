@@ -3,7 +3,7 @@ from skimage import measure
 
 
 PATCH_SIZE = 256
-OVERLAP = 128
+OVERLAP = 64
 MAX_DIM = 2000
 
 
