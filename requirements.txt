@@ -284,7 +284,7 @@ platformdirs==4.10.0
     # via libpysal
 protobuf==7.35.1
     # via streamlit
-pyarrow==16.1.0
+pyarrow==23.0.1
     # via
     #   cellseg-models-pytorch
     #   streamlit
