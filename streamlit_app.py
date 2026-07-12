@@ -124,26 +124,27 @@ plt.rcParams.update({
     "ytick.labelsize": 9,
     "legend.fontsize": 9,
     "figure.dpi": 100,
+    "axes.facecolor": "white",
+    "axes.edgecolor": "black",
 })
 sns.set_theme(style="ticks", rc={
-    "axes.facecolor": "#F5F5F5",
+    "axes.facecolor": "white",
     "axes.grid": True,
-    "grid.color": "white",
+    "grid.color": "#e0e0e0",
     "grid.linestyle": "-",
-    "grid.alpha": 0.8,
+    "grid.alpha": 0.5,
 })
 COLORS = {"Live": "#27ae60", "Dead": "#e74c3c"}
 
 
 def plot_morphology(df):
-    fig = plt.figure(figsize=(14, 8))
-    gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.35, wspace=0.3)
-    ax_area = fig.add_subplot(gs[0, 0])
-    ax_ecc = fig.add_subplot(gs[0, 1])
-    ax_scatter = fig.add_subplot(gs[:, 2])
-    ax_jagg = fig.add_subplot(gs[1, 0])
-    ax_comp = fig.add_subplot(gs[1, 1])
+    classes = [c for c in ("Live", "Dead") if c in df["Status"].values]
+    n_rows = len(classes)
 
+    fig = plt.figure(figsize=(12, n_rows * 2.5))
+    gs = gridspec.GridSpec(n_rows, 4, figure=fig, hspace=0.4, wspace=0.35)
+
+    cols = ["area", "eccentricity", "jaggedness", "compactness"]
     titles = {
         "area": "Area",
         "eccentricity": "Eccentricity",
@@ -151,47 +152,33 @@ def plot_morphology(df):
         "compactness": "Compactness",
     }
     xlabels = {
-        "area": "Area (px\u00b2)",
-        "eccentricity": "Eccentricity (a.u.)",
-        "jaggedness": "Perimeter / Area",
-        "compactness": "Area / Perimeter",
+        "area": r"\textit{Area} (px\u00b2)",
+        "eccentricity": r"\textit{Eccentricity} (a.u.)",
+        "jaggedness": r"\textit{Jaggedness} (px\u207b\u00b9)",
+        "compactness": r"\textit{Compactness} (px)",
     }
 
-    for ax, col in zip([ax_area, ax_ecc, ax_jagg, ax_comp], titles):
-        for status in ("Live", "Dead"):
-            sub = df[df["Status"] == status]
-            if len(sub):
-                sns.histplot(sub[col], bins=12, stat="density", common_norm=False,
-                             alpha=0.3, color=COLORS[status], label=status,
-                             edgecolor=COLORS[status], linewidth=0.5, ax=ax)
-                sns.kdeplot(sub[col], color=COLORS[status], linewidth=2, ax=ax)
+    for row_idx, status in enumerate(classes):
+        sub = df[df["Status"] == status]
+        n = len(sub)
+        for col_idx, col in enumerate(cols):
+            ax = fig.add_subplot(gs[row_idx, col_idx])
+            if n:
+                bins = min(30, max(8, n // 5))
+                sns.histplot(sub[col], bins=bins, stat="density",
+                             alpha=0.3, color=COLORS[status],
+                             edgecolor=COLORS[status], linewidth=0.4, ax=ax)
+                if n >= 2:
+                    sns.kdeplot(sub[col], color=COLORS[status], linewidth=1.8,
+                                bw_adjust=0.5, ax=ax)
                 mean_val = sub[col].mean()
                 ax.axvline(mean_val, color=COLORS[status], linestyle="--",
-                           linewidth=1.5, alpha=0.7)
-        ax.set_title(titles[col], fontsize=13, pad=8)
-        ax.set_xlabel(xlabels[col], fontsize=11)
-        ax.set_ylabel("Density", fontsize=11)
-        ax.tick_params(labelsize=9)
-        if df["Status"].nunique() > 1:
-            leg = ax.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
-            leg.get_frame().set_linewidth(0.5)
-        sns.despine(ax=ax, top=True, right=True)
-
-    for status in ("Live", "Dead"):
-        sub = df[df["Status"] == status]
-        if len(sub):
-            sns.scatterplot(data=sub, x="area", y="eccentricity",
-                            color=COLORS[status], label=status,
-                            ax=ax_scatter, s=70, edgecolor="white", linewidth=0.5,
-                            alpha=0.85)
-    ax_scatter.set_title("Area vs Eccentricity", fontsize=13, pad=8)
-    ax_scatter.set_xlabel("Area (px\u00b2)", fontsize=11)
-    ax_scatter.set_ylabel("Eccentricity", fontsize=11)
-    ax_scatter.tick_params(labelsize=9)
-    if df["Status"].nunique() > 1:
-        leg = ax_scatter.legend(fontsize=9, framealpha=0.9, edgecolor="gray")
-        leg.get_frame().set_linewidth(0.5)
-    sns.despine(ax=ax_scatter, top=True, right=True)
+                           linewidth=1.0, alpha=0.6)
+            ax.set_title(f"{status} \u2013 {titles[col]}", fontsize=12, pad=6)
+            ax.set_xlabel(xlabels[col], fontsize=10)
+            ax.set_ylabel("Density", fontsize=10)
+            ax.tick_params(labelsize=8)
+            sns.despine(ax=ax, top=True, right=True)
 
     fig.suptitle("Organoid Morphology Analysis", fontsize=15, y=1.02)
     return fig
