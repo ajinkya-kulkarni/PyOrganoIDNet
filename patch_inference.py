@@ -1,5 +1,6 @@
 import numpy as np
 from skimage import measure
+from skimage.segmentation import relabel_sequential
 
 
 PATCH_SIZE = 256
@@ -42,24 +43,19 @@ def _instance_priority(region):
     return 1.0 - dist / max_dist
 
 
-def _collect_regions(cleaned_instances, tile_x, tile_y, candidates, img_h, img_w):
+def _collect_regions(cleaned_instances, tile_x, tile_y, candidates):
     for region in measure.regionprops(cleaned_instances):
         if region.area == 0:
             continue
         r = region.slice
         label = region.label
         local_mask = (cleaned_instances[r[0], r[1]] == label).astype(bool)
-        global_y = tile_y + r[0].start
-        global_x = tile_x + r[1].start
-        global_mask = np.zeros((img_h, img_w), dtype=bool)
-        global_mask[
-            global_y : global_y + r[0].stop - r[0].start,
-            global_x : global_x + r[1].stop - r[1].start,
-        ] = local_mask
         priority = _instance_priority(region)
         candidates.append(
             {
-                "global_mask": global_mask,
+                "local_mask": local_mask,
+                "y_start": tile_y + r[0].start,
+                "x_start": tile_x + r[1].start,
                 "priority": priority,
                 "area": region.area,
             }
@@ -99,7 +95,7 @@ def predict_large_image(
 
             _remove_border_instances(instances, x, y, W, H)
 
-            _collect_regions(instances, x, y, candidates, H, W)
+            _collect_regions(instances, x, y, candidates)
 
             tiles_done += 1
             if progress_callback is not None:
@@ -111,14 +107,17 @@ def predict_large_image(
     next_id = 1
 
     for candidate in candidates:
-        mask = candidate["global_mask"]
-        overlap_pixels = (canvas > 0) & mask
+        y0, x0 = candidate["y_start"], candidate["x_start"]
+        local_mask = candidate["local_mask"]
+        h, w = local_mask.shape
+        slice_ = (slice(y0, y0 + h), slice(x0, x0 + w))
+        overlap_pixels = (canvas[slice_] > 0) & local_mask
         ratio = (
             overlap_pixels.sum() / candidate["area"] if candidate["area"] > 0 else 1.0
         )
 
         if ratio <= iou_thresh:
-            canvas[mask] = next_id
+            canvas[slice_][local_mask] = next_id
             next_id += 1
 
-    return canvas
+    return relabel_sequential(canvas)[0]

@@ -15,6 +15,7 @@ from cellseg_models_pytorch.postproc.functional.cellpose.cellpose import (
 from cellseg_models_pytorch.transforms.albu_transforms import MinMaxNormalization
 from patch_inference import predict_large_image
 from skimage.measure import regionprops_table
+from cellpose import models as cellpose_models
 
 
 CKPT = "models/best.pt"
@@ -44,6 +45,20 @@ def predict(model, img_rgb):
     flow = out["nuc"].aux_map[0].cpu().numpy()
     instances = post_proc_cellpose(fg_prob > 0.5, flow, min_size=30)
     return instances
+
+
+@st.cache_resource
+def load_cellpose_model():
+    return cellpose_models.CellposeModel(
+        pretrained_model="models/cellpose_pretrained.379168"
+    )
+
+
+@torch.no_grad()
+def predict_cellpose(model, img_rgb):
+    gray = np.mean(img_rgb, axis=2)
+    masks, _, _ = model.eval(gray, channels=[0, 0])
+    return masks
 
 
 def classify_organoids(instances, gray_img, threshold=50):
@@ -227,7 +242,21 @@ def plot_morphology(df):
 st.set_page_config(page_title="OrganoIDNet", layout="wide")
 st.title("OrganoIDNet")
 
-model = load_model()
+model_choice = st.sidebar.radio(
+    "Segmentation model",
+    ["CellSeg-PyTorch (current)", "Cellpose (original)"],
+)
+
+if model_choice == "Cellpose (original)":
+    seg_model = load_cellpose_model()
+
+    def predict_fn(p):
+        return predict_cellpose(seg_model, p)
+else:
+    seg_model = load_model()
+
+    def predict_fn(p):
+        return predict(seg_model, p)
 
 
 def load_image(f):
@@ -254,7 +283,7 @@ if n_files == 1:
     img = load_image(f)
     prog = st.progress(0, text="Segmenting organoids...")
     instances = predict_large_image(
-        lambda p: predict(model, p),
+        predict_fn,
         img,
         progress_callback=lambda d, t: prog.progress(d / t, text=f"Tile {d}/{t}"),
     )
@@ -348,7 +377,7 @@ else:
                 prog.progress(min(frac, 1.0), text=f"{name}  |  tile {d}/{t}")
 
             instances = predict_large_image(
-                lambda p: predict(model, p),
+                predict_fn,
                 img,
                 progress_callback=on_tile,
             )
