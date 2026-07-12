@@ -21,7 +21,7 @@ from cellseg_models_pytorch.postproc.functional.cellpose.cellpose import (
 from cellseg_models_pytorch.transforms.albu_transforms import MinMaxNormalization
 
 DEVICE = "mps" if torch.backends.mps.is_available() else "cpu"
-CKPT = Path(__file__).parent / "output" / "best.pt"
+CKPT = Path(__file__).parent.parent.parent / "models" / "best.pt"
 DATA_ROOT = Path("/Users/ajinkyakulkarni/Desktop/OrganoIDNetData-256")
 OUT = Path(__file__).parent / "output"
 TRANSFORM = A.Compose([MinMaxNormalization(always_apply=True)])

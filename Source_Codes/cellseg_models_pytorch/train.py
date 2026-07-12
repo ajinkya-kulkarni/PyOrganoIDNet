@@ -26,6 +26,7 @@ SEED = 42
 
 DATA_ROOT = Path("/Users/ajinkyakulkarni/Desktop/OrganoIDNetData-256")
 OUT_DIR = Path(__file__).parent / "output"
+MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
 BATCH_SIZE = 32
 LR = 1e-3
@@ -140,6 +141,7 @@ def main():
     if OUT_DIR.exists():
         shutil.rmtree(OUT_DIR)
     os.makedirs(OUT_DIR, exist_ok=True)
+    os.makedirs(MODELS_DIR, exist_ok=True)
 
     print(f"Device: {DEVICE}")
 
@@ -243,14 +245,14 @@ def main():
 
         print(f"  train: {avg_train:.4f}  val: {avg_val:.4f}  dice: {avg_dice:.4f}  lr: {lr:.2e}")
 
-        torch.save({"model": model.state_dict(), "epoch": epoch}, OUT_DIR / "last.pt")
+        torch.save({"model": model.state_dict(), "epoch": epoch}, MODELS_DIR / "last.pt")
 
         if avg_dice > best_dice:
             best_dice = avg_dice
             no_improve = 0
             torch.save(
                 {"model": model.state_dict(), "epoch": epoch, "dice": avg_dice},
-                OUT_DIR / "best.pt",
+                MODELS_DIR / "best.pt",
             )
             print(f"  -> best.pt (dice={avg_dice:.4f})")
         else:
