@@ -254,7 +254,7 @@ if uploaded is not None:
                     "Live": int((sub["Status"] == "Live").sum()),
                     "Dead": int((sub["Status"] == "Dead").sum()),
                 })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
 
         st.subheader("Morphology distributions")
         st.pyplot(plot_morphology(stats_df))
@@ -262,4 +262,4 @@ if uploaded is not None:
         st.subheader("Per-organoid details")
         display = stats_df[["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]]
         display.columns = ["ID", "Area (px\u00b2)", "Eccentricity", "Mean intensity", "Size", "Status"]
-        st.dataframe(display, use_container_width=True, hide_index=True)
+        st.dataframe(display, width="stretch", hide_index=True)
