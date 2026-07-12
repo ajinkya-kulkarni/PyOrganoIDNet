@@ -165,10 +165,10 @@ def plot_morphology(df):
         "compactness": "Compactness",
     }
     xlabels = {
-        "area": r"$\textit{Area}$ (px\u00b2)",
-        "eccentricity": r"$\textit{Eccentricity}$ (a.u.)",
-        "jaggedness": r"$\textit{Jaggedness}$ (px\u207b\u00b9)",
-        "compactness": r"$\textit{Compactness}$ (px)",
+        "area": r"$\mathit{Area}$ (px\u00b2)",
+        "eccentricity": r"$\mathit{Eccentricity}$ (a.u.)",
+        "jaggedness": r"$\mathit{Jaggedness}$ (px\u207b\u00b9)",
+        "compactness": r"$\mathit{Compactness}$ (px)",
     }
 
     for row_idx, status in enumerate(classes):
