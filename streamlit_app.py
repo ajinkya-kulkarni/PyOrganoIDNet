@@ -1,6 +1,5 @@
 import io
 
-import cv2
 import numpy as np
 import streamlit as st
 import torch
@@ -60,7 +59,7 @@ if uploaded is not None:
     img = np.array(Image.open(io.BytesIO(uploaded.read())).convert("RGB"))
     if img.shape[:2] != (256, 256):
         st.warning(f"Expected 256x256, got {img.shape[1]}x{img.shape[0]}. Resizing.")
-        img = cv2.resize(img, (256, 256))
+        img = np.array(Image.fromarray(img).resize((256, 256), Image.LANCZOS))
 
     instances, fg_prob = predict(model, img)
 

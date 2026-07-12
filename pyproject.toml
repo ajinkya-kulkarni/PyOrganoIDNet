@@ -8,7 +8,6 @@ dependencies = [
     "cellseg-models-pytorch>=0.1.30",
     "matplotlib",
     "numpy",
-    "opencv-python-headless",
     "pandas",
     "pillow",
     "scikit-image",
