@@ -1,9 +1,11 @@
 import io
 
 import albumentations as A
+import matplotlib.gridspec as gridspec
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import streamlit as st
 import torch
 from PIL import Image
@@ -85,11 +87,13 @@ def compute_stats(instances, img):
     props = regionprops_table(
         instances,
         intensity_image=gray,
-        properties=("label", "area", "eccentricity", "mean_intensity"),
+        properties=("label", "area", "perimeter", "eccentricity", "mean_intensity"),
     )
     df = pd.DataFrame(props)
     if len(df) == 0:
         return df
+    df["jaggedness"] = df["perimeter"] / df["area"]
+    df["compactness"] = df["area"] / df["perimeter"]
     df["Status"] = np.where(df["mean_intensity"] >= INTENSITY_THRESHOLD, "Live", "Dead")
     areas = df["area"].values
     if len(areas) > 1:
@@ -108,6 +112,50 @@ def compute_stats(instances, img):
         return "Huge"
     df["Size"] = df["area"].apply(size_cat)
     return df
+
+
+sns.set_style("whitegrid")
+COLORS = {"Live": "#2ecc71", "Dead": "#e74c3c"}
+
+
+def plot_morphology(df):
+    fig = plt.figure(figsize=(14, 8))
+    gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.3, wspace=0.3)
+    ax_area = fig.add_subplot(gs[0, 0])
+    ax_ecc = fig.add_subplot(gs[0, 1])
+    ax_scatter = fig.add_subplot(gs[:, 2])
+    ax_jagg = fig.add_subplot(gs[1, 0])
+    ax_comp = fig.add_subplot(gs[1, 1])
+
+    feature_config = [
+        (ax_area, "area", "Area (px\u00b2)"),
+        (ax_ecc, "eccentricity", "Eccentricity"),
+        (ax_jagg, "jaggedness", "Jaggedness (perimeter / area)"),
+        (ax_comp, "compactness", "Compactness (area / perimeter)"),
+    ]
+
+    for ax, col, xlabel in feature_config:
+        for status in ("Live", "Dead"):
+            sub = df[df["Status"] == status]
+            if len(sub):
+                sns.histplot(sub[col], bins=10, alpha=0.5, color=COLORS[status],
+                             label=status, ax=ax)
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel("Count")
+        if df["Status"].nunique() > 1:
+            ax.legend(fontsize=8)
+
+    for status in ("Live", "Dead"):
+        sub = df[df["Status"] == status]
+        if len(sub):
+            sns.scatterplot(data=sub, x="area", y="eccentricity", color=COLORS[status],
+                            label=status, ax=ax_scatter, s=50, edgecolor="white", linewidth=0.3)
+    ax_scatter.set_xlabel("Area (px\u00b2)")
+    ax_scatter.set_ylabel("Eccentricity")
+    if df["Status"].nunique() > 1:
+        ax_scatter.legend(fontsize=8)
+
+    return fig
 
 
 st.set_page_config(page_title="OrganoIDNet", layout="wide")
@@ -168,6 +216,9 @@ if uploaded is not None:
                     "Dead": int((sub["Status"] == "Dead").sum()),
                 })
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+        st.subheader("Morphology distributions")
+        st.pyplot(plot_morphology(stats_df))
 
         st.subheader("Per-organoid details")
         display = stats_df[["label", "area", "eccentricity", "mean_intensity", "Size", "Status"]]

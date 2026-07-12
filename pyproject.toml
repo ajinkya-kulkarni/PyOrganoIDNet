@@ -12,6 +12,7 @@ dependencies = [
     "pillow",
     "scikit-image",
     "scipy",
+    "seaborn",
     "streamlit",
     "tqdm",
 ]
