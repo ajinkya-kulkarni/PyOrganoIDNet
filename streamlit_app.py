@@ -236,7 +236,7 @@ def load_image(f):
 
 uploaded_files = st.file_uploader(
     "Upload organoid images (256\u00d7256 patches or larger, up to 2000px per side; up to 20)",
-    type=["png", "jpg", "jpeg"],
+    type=["png", "jpg", "jpeg", "tif", "tiff"],
     accept_multiple_files=True,
 )
 
@@ -252,7 +252,13 @@ if n_files > 20:
 if n_files == 1:
     f = uploaded_files[0]
     img = load_image(f)
-    instances = predict_large_image(lambda p: predict(model, p), img)
+    prog = st.progress(0, text="Segmenting organoids...")
+    instances = predict_large_image(
+        lambda p: predict(model, p),
+        img,
+        progress_callback=lambda d, t: prog.progress(d / t, text=f"Tile {d}/{t}"),
+    )
+    prog.empty()
     gray = np.mean(img, axis=2)
     live_ids, dead_ids = classify_organoids(instances, gray, INTENSITY_THRESHOLD)
     stats_df = compute_stats(instances, img)
@@ -332,14 +338,23 @@ else:
     if "batch_key" not in st.session_state or st.session_state["batch_key"] != file_key:
         st.session_state["batch_key"] = file_key
         st.session_state["batch_results"] = []
-        progress = st.progress(0, text="Segmenting organoids...")
+        prog = st.progress(0, text="Segmenting organoids...")
         for i, f in enumerate(uploaded_files):
             img = load_image(f)
-            instances = predict_large_image(lambda p: predict(model, p), img)
+            name = f.name
+
+            def on_tile(d, t, name=name, i=i):
+                frac = (i + d / t) / n_files
+                prog.progress(min(frac, 1.0), text=f"{name}  |  tile {d}/{t}")
+
+            instances = predict_large_image(
+                lambda p: predict(model, p),
+                img,
+                progress_callback=on_tile,
+            )
             stats_df = compute_stats(instances, img)
             st.session_state["batch_results"].append((f.name, stats_df))
-            progress.progress((i + 1) / n_files, text=f"Segmented {i + 1}/{n_files}")
-        progress.empty()
+        prog.empty()
 
     results = st.session_state["batch_results"]
     all_dfs = [df for _, df in results if len(df) > 0]

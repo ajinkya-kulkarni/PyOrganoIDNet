@@ -73,6 +73,7 @@ def predict_large_image(
     overlap=OVERLAP,
     iou_thresh=0.5,
     max_dim=MAX_DIM,
+    progress_callback=None,
 ):
     H, W = img_rgb.shape[:2]
 
@@ -86,6 +87,9 @@ def predict_large_image(
     x_starts = _patch_starts(W, patch_size, overlap)
     y_starts = _patch_starts(H, patch_size, overlap)
 
+    total_tiles = len(x_starts) * len(y_starts)
+    tiles_done = 0
+
     candidates = []
 
     for y in y_starts:
@@ -96,6 +100,10 @@ def predict_large_image(
             _remove_border_instances(instances, x, y, W, H)
 
             _collect_regions(instances, x, y, candidates, H, W)
+
+            tiles_done += 1
+            if progress_callback is not None:
+                progress_callback(tiles_done, total_tiles)
 
     candidates.sort(key=lambda c: c["priority"], reverse=True)
 
