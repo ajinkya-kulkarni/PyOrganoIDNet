@@ -324,13 +324,16 @@ else:
             t = len(df)
             lv = int((df["Status"] == "Live").sum()) if t > 0 else 0
             dd = int((df["Status"] == "Dead").sum()) if t > 0 else 0
-            v = lv / t * 100 if t > 0 else 0
+            if t > 0:
+                v = f"{lv / t * 100:.1f}%"
+            else:
+                v = "\u2014"
             summary_rows.append({
                 "Image": name,
                 "Organoids": t,
                 "Live": lv,
                 "Dead": dd,
-                "Viability": f"{v:.1f}%",
+                "Viability": v,
             })
         st.dataframe(pd.DataFrame(summary_rows), width="stretch", hide_index=True)
 
@@ -347,6 +350,7 @@ else:
                     "Dead": int((sub["Status"] == "Dead").sum()),
                 })
         st.dataframe(pd.DataFrame(sz_rows), width="stretch", hide_index=True)
+        st.caption("*Size categories computed per image (paper methodology)")
 
         st.subheader("Morphology distributions (aggregate)")
         figs = plot_morphology(combined)
