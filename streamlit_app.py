@@ -152,10 +152,10 @@ def plot_morphology(df):
         "compactness": "Compactness",
     }
     xlabels = {
-        "area": r"\textit{Area} (px\u00b2)",
-        "eccentricity": r"\textit{Eccentricity} (a.u.)",
-        "jaggedness": r"\textit{Jaggedness} (px\u207b\u00b9)",
-        "compactness": r"\textit{Compactness} (px)",
+        "area": r"$\textit{Area}$ (px\u00b2)",
+        "eccentricity": r"$\textit{Eccentricity}$ (a.u.)",
+        "jaggedness": r"$\textit{Jaggedness}$ (px\u207b\u00b9)",
+        "compactness": r"$\textit{Compactness}$ (px)",
     }
 
     for row_idx, status in enumerate(classes):
@@ -173,11 +173,14 @@ def plot_morphology(df):
                                 bw_adjust=0.5, ax=ax)
                 mean_val = sub[col].mean()
                 ax.axvline(mean_val, color=COLORS[status], linestyle="--",
-                           linewidth=1.0, alpha=0.6)
+                           linewidth=1.0, alpha=0.6, label=f"{status} mean")
             ax.set_title(f"{status} \u2013 {titles[col]}", fontsize=12, pad=6)
             ax.set_xlabel(xlabels[col], fontsize=10)
             ax.set_ylabel("Density", fontsize=10)
             ax.tick_params(labelsize=8)
+            if n >= 2:
+                leg = ax.legend(fontsize=8, framealpha=0.9, edgecolor="#b0b0b0")
+                leg.get_frame().set_linewidth(0.5)
             sns.despine(ax=ax, top=True, right=True)
 
     fig.suptitle("Organoid Morphology Analysis", fontsize=15, y=1.02)
