@@ -15,7 +15,7 @@ from cellseg_models_pytorch.postproc.functional.cellpose.cellpose import (
 )
 from cellseg_models_pytorch.transforms.albu_transforms import MinMaxNormalization
 from skimage.measure import regionprops_table
-from skimage.segmentation import find_boundaries
+
 
 CKPT = "models/best.pt"
 DEVICE = "cpu"
@@ -73,13 +73,25 @@ def draw_classified_outlines(img, instances, live_ids, dead_ids):
     if len(np.unique(instances)) <= 1:
         return overlay
     for inst_id in live_ids:
-        mask = instances == inst_id
-        bounds = find_boundaries(mask, mode="outer")
-        overlay[bounds] = [0, 255, 0]
+        ys, xs = np.where(instances == inst_id)
+        if len(ys) == 0:
+            continue
+        y1, y2 = int(ys.min()), int(ys.max())
+        x1, x2 = int(xs.min()), int(xs.max())
+        overlay[y1:y2 + 1, x1] = [0, 255, 0]
+        overlay[y1:y2 + 1, x2] = [0, 255, 0]
+        overlay[y1, x1:x2 + 1] = [0, 255, 0]
+        overlay[y2, x1:x2 + 1] = [0, 255, 0]
     for inst_id in dead_ids:
-        mask = instances == inst_id
-        bounds = find_boundaries(mask, mode="outer")
-        overlay[bounds] = [255, 0, 0]
+        ys, xs = np.where(instances == inst_id)
+        if len(ys) == 0:
+            continue
+        y1, y2 = int(ys.min()), int(ys.max())
+        x1, x2 = int(xs.min()), int(xs.max())
+        overlay[y1:y2 + 1, x1] = [255, 0, 0]
+        overlay[y1:y2 + 1, x2] = [255, 0, 0]
+        overlay[y1, x1:x2 + 1] = [255, 0, 0]
+        overlay[y2, x1:x2 + 1] = [255, 0, 0]
     return overlay
 
 
