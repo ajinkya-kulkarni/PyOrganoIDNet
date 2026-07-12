@@ -114,7 +114,18 @@ def compute_stats(instances, img):
     return df
 
 
-sns.set_theme(style="ticks", font_scale=1.1, rc={
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica Neue", "Arial", "Liberation Sans", "DejaVu Sans", "sans-serif"],
+    "font.size": 11,
+    "axes.titlesize": 13,
+    "axes.labelsize": 11,
+    "xtick.labelsize": 9,
+    "ytick.labelsize": 9,
+    "legend.fontsize": 9,
+    "figure.dpi": 100,
+})
+sns.set_theme(style="ticks", rc={
     "axes.facecolor": "#F5F5F5",
     "axes.grid": True,
     "grid.color": "white",
