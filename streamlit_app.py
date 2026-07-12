@@ -72,13 +72,14 @@ def draw_classified_outlines(img, instances, live_ids, dead_ids):
     overlay = img.copy()
     if len(np.unique(instances)) <= 1:
         return overlay
-    all_bounds = find_boundaries(instances, mode="outer")
-    if live_ids:
-        live_bounds = find_boundaries(np.isin(instances, live_ids).astype(int), mode="outer")
-        overlay[live_bounds & all_bounds] = [0, 255, 0]
-    if dead_ids:
-        dead_bounds = find_boundaries(np.isin(instances, dead_ids).astype(int), mode="outer")
-        overlay[dead_bounds & all_bounds] = [255, 0, 0]
+    for inst_id in live_ids:
+        mask = instances == inst_id
+        bounds = find_boundaries(mask, mode="outer")
+        overlay[bounds] = [0, 255, 0]
+    for inst_id in dead_ids:
+        mask = instances == inst_id
+        bounds = find_boundaries(mask, mode="outer")
+        overlay[bounds] = [255, 0, 0]
     return overlay
 
 
