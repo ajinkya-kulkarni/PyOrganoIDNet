@@ -27,13 +27,13 @@ SEED = 42
 DATA_ROOT = Path("/Users/ajinkyakulkarni/Desktop/OrganoIDNetData-256")
 OUT_DIR = Path(__file__).parent / "output"
 
-BATCH_SIZE = 16
+BATCH_SIZE = 32
 LR = 1e-3
 ENCODER = "efficientnet_b0"
 SUB_SIZE = 3000
-PATIENCE = 30
-MAX_EPOCHS = 1
-WARMUP_EPOCHS = 5
+PATIENCE = 10
+MAX_EPOCHS = 30
+WARMUP_EPOCHS = 3
 ETA_MIN = 1e-6
 CLIP_NORM = 1.0
 
