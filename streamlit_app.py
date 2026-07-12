@@ -96,7 +96,7 @@ def compute_stats(instances, img):
     df["jaggedness"] = df["perimeter"] / df["area"]
     df["compactness"] = df["area"] / df["perimeter"]
     df["Status"] = np.where(df["mean_intensity"] >= INTENSITY_THRESHOLD, "Live", "Dead")
-    areas = df["area"].values
+    areas = np.asarray(df["area"], dtype=float)
     if len(areas) > 1:
         p20, p40, p60, p80 = np.percentile(areas, [20, 40, 60, 80])
     else:
